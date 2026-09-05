@@ -1,0 +1,27 @@
+{
+  "buckets": [
+    15,
+    20,
+    25,
+    30
+  ],
+  "q_thresholds": [
+    0.0001,
+    0.001,
+    0.01,
+    0.05
+  ],
+  "n_sim": 100,
+  "n_molecules": 1000,
+  "env": {
+    "timestamp": "2026-08-14T18:15:27.362804+00:00",
+    "python": "3.12.8",
+    "platform": "Linux-5.15.0-177-generic-x86_64-with-glibc2.35",
+    "numpy": "2.5.2",
+    "scipy": "1.18.0",
+    "pandas": "3.0.5",
+    "statsmodels": "0.14.6",
+    "scikit-learn": "1.9.0",
+    "seed": 42
+  }
+}

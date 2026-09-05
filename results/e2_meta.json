@@ -1,0 +1,21 @@
+{
+  "layers": [
+    "plasma_transcriptome",
+    "plasma_proteomics",
+    "plasma_cytokine",
+    "clinical_test",
+    "plasma_metabolomics_metabolite",
+    "plasma_lipidomics"
+  ],
+  "env": {
+    "timestamp": "2026-08-14T17:40:42.544145+00:00",
+    "python": "3.12.8",
+    "platform": "Linux-5.15.0-177-generic-x86_64-with-glibc2.35",
+    "numpy": "2.5.2",
+    "scipy": "1.18.0",
+    "pandas": "3.0.5",
+    "statsmodels": "0.14.6",
+    "scikit-learn": "1.9.0",
+    "seed": 42
+  }
+}

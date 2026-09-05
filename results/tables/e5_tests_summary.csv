@@ -1,0 +1,7 @@
+layer,n_variables,n_subjects,n_perm,n_linear_bh,n_linear_by,frac_linear_bh,n_nonlinear_bh,n_nonlinear_by,frac_nonlinear_bh,n_segmented_bh,n_segmented_by,frac_segmented_bh,median_r2_linear,median_r2_spline,n_breakpoints_significant,breakpoint_median,breakpoint_median_ci_lo,breakpoint_median_ci_hi,frac_bp_within2_of_44,frac_bp_within2_of_60,null_frac_bp_within2_of_44,null_frac_bp_within2_of_60,powerequal_peak,powerequal_crest,powerequal_p_fwer,powerequal_k
+plasma_transcriptome,8556,97,200,0,0,0.0,0,0,0.0,0,0,0.0,0.004799576979857556,0.03132782323883304,0,,,,,,,,0,,1.0,16
+plasma_proteomics,302,102,200,6,0,0.019867549668874173,0,0,0.0,0,0,0.0,0.006577256369099338,0.03867285318650837,0,,,,,,,,0,,1.0,17
+plasma_metabolomics_metabolite,814,96,200,14,2,0.0171990171990172,0,0,0.0,0,0,0.0,0.00916027528749419,0.04660534273256117,0,,,,,,,,0,,1.0,16
+plasma_lipidomics,846,97,200,0,0,0.0,0,0,0.0,0,0,0.0,0.011178004078377435,0.061304635016214526,0,,,,,,,,0,,1.0,16
+plasma_cytokine,66,91,200,0,0,0.0,46,13,0.696969696969697,35,0,0.5303030303030303,0.019421643481601136,0.17794820470069556,35,41.0,41.0,41.0,0.02857142857142857,0.0,0.12310606060606061,0.21106060606060606,1,47.0,0.25349301397205587,15
+clinical_test,45,100,200,1,1,0.022222222222222223,0,0,0.0,0,0,0.0,0.005206229182218136,0.04643723296863944,0,,,,,,,,0,,1.0,16

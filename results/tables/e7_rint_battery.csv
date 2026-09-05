@@ -1,0 +1,13 @@
+layer,transform,n_variables,n_linear,n_nonlinear,n_segmented,breakpoint_median,breakpoint_mode,frac_at_grid_edge,frac_within2_of_44,frac_within2_of_60
+plasma_transcriptome,zscore (as in E5),8556,0,0,0,,,,,
+plasma_transcriptome,rank-inverse-normal,8556,0,0,0,,,,,
+plasma_proteomics,zscore (as in E5),302,1,0,0,,,,,
+plasma_proteomics,rank-inverse-normal,302,2,0,0,,,,,
+plasma_metabolomics_metabolite,zscore (as in E5),814,17,0,0,,,,,
+plasma_metabolomics_metabolite,rank-inverse-normal,814,29,0,0,,,,,
+plasma_lipidomics,zscore (as in E5),846,0,0,0,,,,,
+plasma_lipidomics,rank-inverse-normal,846,0,0,0,,,,,
+plasma_cytokine,zscore (as in E5),66,0,33,22,41.0,41.0,0.0,0.045454545454545456,0.0
+plasma_cytokine,rank-inverse-normal,66,0,19,4,43.0,43.0,0.0,0.75,0.0
+clinical_test,zscore (as in E5),45,1,0,5,63.0,41.0,0.0,0.0,0.0
+clinical_test,rank-inverse-normal,45,2,0,6,63.0,41.0,0.0,0.0,0.0

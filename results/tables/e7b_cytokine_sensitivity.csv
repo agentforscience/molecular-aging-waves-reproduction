@@ -1,0 +1,26 @@
+subset,n_subjects,n_analytes,age_min,age_max,n_nonlinear,n_segmented,breakpoints,n_breakpoints_within2_of_44
+all subjects (RINT),91,66,25.91,75.23,21,7,41;41;41;43;43;43;44,4
+drop the single youngest subject (age 25.9),90,66,29.18,75.23,0,0,,0
+drop all subjects under 30,89,66,31.37,75.23,0,0,,0
+drop all subjects under 35,86,66,38.8,75.23,0,0,,0
+drop the single oldest subject,90,66,25.91,73.4,26,5,41;43;43;44;66,3
+drop one random subject (rep 1),90,66,25.91,75.23,21,15,41;41;41;41;41;41;41;41;42;43;43;44;44;44;65,6
+drop one random subject (rep 2),90,66,25.91,75.23,24,7,41;41;41;42;43;43;44,4
+drop one random subject (rep 3),90,66,25.91,75.23,15,4,41;43;43;44,3
+drop one random subject (rep 4),90,66,25.91,75.23,20,13,41;41;41;41;41;41;42;43;43;43;44;44;65,6
+drop one random subject (rep 5),90,66,25.91,75.23,27,7,41;41;41;42;43;43;44,4
+drop one random subject (rep 6),90,66,25.91,75.23,24,6,41;41;43;43;43;44,4
+drop one random subject (rep 7),90,66,25.91,75.23,22,7,41;41;41;43;43;43;44,4
+drop one random subject (rep 8),90,66,25.91,75.23,22,19,41;41;41;41;41;41;41;41;41;42;42;43;43;43;43;44;44;65;65,8
+drop one random subject (rep 9),90,66,25.91,75.23,23,18,41;41;41;41;41;41;41;41;42;42;43;43;43;43;44;44;65;65,8
+drop one random subject (rep 10),90,66,25.91,75.23,24,7,41;41;41;43;43;43;44,4
+drop one random subject (rep 11),90,66,25.91,75.23,18,4,41;42;43;44,3
+drop one random subject (rep 12),90,66,25.91,75.23,22,4,41;43;43;44,3
+drop one random subject (rep 13),90,66,25.91,75.23,15,5,41;41;43;43;44,3
+drop one random subject (rep 14),90,66,25.91,75.23,19,13,41;41;41;41;41;41;42;43;43;43;44;44;65,6
+drop one random subject (rep 15),90,66,25.91,75.23,22,16,41;41;41;41;41;41;41;41;42;42;43;44;44;44;44;65,7
+drop one random subject (rep 16),90,66,25.91,75.23,21,15,41;41;41;41;41;41;41;41;42;43;43;43;44;44;65,6
+drop one random subject (rep 17),90,66,25.91,75.23,23,3,42;43;59,2
+drop one random subject (rep 18),90,66,25.91,75.23,23,15,42;42;42;42;42;42;42;42;42;43;43;44;44;44;65,14
+drop one random subject (rep 19),90,66,25.91,75.23,20,4,41;43;43;44,3
+drop one random subject (rep 20),90,66,25.91,75.23,15,5,42;44;44;44;44,5
