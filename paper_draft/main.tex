@@ -1,0 +1,466 @@
+\documentclass{article}
+
+\usepackage{neurips_2025}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{multirow}
+
+\title{Do the claimed waves of molecular aging survive rigorous\\statistical testing? Reproducing and extending the\\LOESS--DE-SWAN artifact analysis}
+
+\author{%
+  Anonymous Author(s)\\
+  Affiliation\\
+  Address\\
+  \texttt{email}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Human molecular aging is widely reported to proceed in discrete waves, with prominent transitions near ages 44 and 60. These claims rest on a single analysis pipeline: LOESS pre-smoothing followed by DE-SWAN sliding-window differential expression. We ask whether the transitions are biological signal or artifacts of that pipeline, and we quantify the answer. Reconstructing all ten omics layers of the iPOP cohort from repository git history, we find that the published pipeline declares 58--94\% of molecules differentially expressed at \emph{every} age, while the identical test applied to the same raw per-subject data yields 8 significant tests out of 1{,}215{,}175. A 2$\times$2 decomposition isolates smoothing, not grid densification, as the mechanism: LOESS evaluated at the observed ages alone reproduces a median 98\% of the published effect. Under a valid permutation null that shuffles ages \emph{before} smoothing, the published peak is no larger than chance ($p=0.37$--$0.66$ in five of six layers, and below the null mean in four), whereas the published shuffle-\emph{after}-smoothing null gives $p\leq0.003$ everywhere; the achieved false discovery proportion is $0.60$--$0.69$ against a nominal $0.05$. Data with no age relationship whatsoever reproduce both published transition ages, and the published 16-cell robustness grid is at least as stable on pure noise as on the real data in 79--100\% of null simulations, so it has no discriminating power. We deliver a corrected inferential battery---spline nonlinearity tests, permutation-calibrated segmented sup-$F$, power-equalised DE-SWAN with family-wise control across window centres, and bootstrap crest confidence intervals---and find essentially no molecule-level age signal in iPOP that survives multiplicity correction, with crest intervals up to 24 years wide. In an independent cohort six times larger (GSE40279, $n=656$), corrected inference does not localise change at 44 or 60. We conclude that the reported transitions are properties of the estimator and the sampling design.
+\end{abstract}
+
+\section{Introduction}
+
+A rapidly expanding literature holds that human molecular aging is not gradual but punctuated by discrete transitions. Lehallier et al.~\cite{lehallier2019} introduced Differential Expression Sliding Window ANalysis (DE-SWAN) and reported plasma proteomic crests at ages 34, 60 and 78. Shen et al.~\cite{shen2024} added LOESS pre-smoothing to the pipeline, applied it to the ten-omics iPOP cohort, and reported nonlinear transitions near ages 44 and 60. The latter result has accumulated roughly 400 citations in under two years; Carbonneau et al.~\cite{carbonneau2026} count more than 100 papers between 2019 and 2026 that inherit LOESS, DE-SWAN, or both. A 2026 review in \emph{Nature Reviews Genetics}~\cite{nrg2026} now treats nonlinear aging as established, and ``midlife critical window'' framings have begun to enter clinical and public discourse.
+
+The stakes of a methodological failure here are therefore unusual. If the crests are properties of the estimator rather than of the biology, the problem is not one incorrect paper but a \emph{reusable} incorrect result that any group can regenerate from any cohort.
+
+A June 2026 bioRxiv preprint by Carbonneau et al.~\cite{carbonneau2026}---which includes the first and last authors of the original waves paper---already established the qualitative point that LOESS combined with DE-SWAN can manufacture waves. That critique analysed one cohort and essentially one modality, offered no replacement estimator, and was explicit that it did not rule out real transitions detectable with other cohorts and models. Four gaps therefore remain open, and this work closes them: (i) coverage of all ten iPOP layers rather than one; (ii) a quantitative decomposition---achieved false discovery proportion, smoothing versus densification, crest confidence intervals---rather than a qualitative demonstration; (iii) a corrected inferential battery delivered rather than recommended; and (iv) an independent, well-powered cohort that separates ``the method is broken'' from ``the cohort is underpowered.''
+
+\subsection{Three claims that the literature conflates}
+
+The central hypothesis---that the reported transitions are artifacts of the LOESS + DE-SWAN pipeline---is only testable once three routinely conflated claims are separated, because they can have, and here do have, different answers:
+
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+& Claim & Status \\
+\midrule
+\textbf{C1} & Molecular aging is \emph{nonlinear} & weak; probably true somewhere \\
+\textbf{C2} & There exist \emph{discrete transition ages} & the actual claim under test \\
+\textbf{C3} & Those ages are \emph{44 and 60} & the specific claim \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+We report on each separately throughout.
+
+\subsection{Pre-registered falsification conditions}
+
+The following conditions were stated before any experiment was run. The hypothesis is \emph{supported} if crest location tracks the age distribution and moves under resampling; if a valid permutation null reproduces the crests; if corrected inference finds no transition, or one whose confidence interval excludes 44 and 60; and if the well-powered cohort shows no concentration of change at 44/60. The hypothesis is \emph{refuted} if a nonlinearity survives cross-validated model selection \emph{and} a shuffle-before-LOESS permutation null with a breakpoint confidence interval covering ${\sim}44$ or ${\sim}60$, \emph{and} replicates independently---which would mean the method was wrong but the biological conclusion right, and we committed in advance to reporting it as such. The likely intermediate outcome---a real monotone age association with no defensible \emph{discrete} transition---refutes the discrete-waves claim while sparing ``nonlinear aging,'' and was to be reported as that distinction rather than collapsed into either extreme.
+
+\subsection{Contributions}
+
+Beyond confirming and quantifying the artifact across ten omics layers, two findings go beyond the existing critique and matter most. First, \textbf{the published robustness argument has no discriminating power}: Shen et al.\ support the ${\sim}44$ crest by showing stability across a 16-cell grid of bucket widths and $q$-thresholds, and we reproduce that stability (crest 43--46 in all 16 cells)---but running the same grid on pure noise, 79--100\% of null simulations produce a crest at least as stable. Second, \textbf{the crest location is set by the sparsity of the age design, not by sample size}: on the LOESS grid the two window halves always contain exactly 20 points each, so unequal group sizes cannot shape the published curve, whereas local subject sparsity can and does.
+
+\section{Data and methods}
+
+\subsection{Data}
+
+\begin{table}[h]
+\centering
+\caption{Datasets.}
+\begin{tabular}{lll}
+\toprule
+Dataset & Size & Role \\
+\midrule
+iPOP cross-section, 10 omics layers & 51--52{,}460 variables $\times$ 77--102 subjects, & source of the \\
+ & ages 25.9--75.2 & ${\sim}44$/${\sim}60$ claim \\
+GSE40279 (Hannum 450K, whole blood) & 473{,}034 CpGs $\times$ 656 subjects, ages 19--101 & independent replication \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The iPOP recovery is non-obvious and worth recording. The data-availability statement of Shen et al.\ points to portals that do not serve the analysed matrices, and the analysis repository's \texttt{ignore\_large\_files.sh} excluded every file over 5\,MB, so the raw pre-LOESS objects are absent from \texttt{main}. They survive in git history and are recovered by \texttt{datasets/recover\_ipop\_from\_git.py} (verified byte-identical on re-run). Without them, DE-SWAN \emph{without} LOESS---the central comparison of this paper---is not runnable at all. The reconstruction resolves the transcriptome to 8{,}556 protein-coding genes $\times$ 97 subjects, matching both the 8{,}556 transcripts reported by Shen et al.\ and the iPOP transcriptomic $n=97$ stated by Carbonneau et al.
+
+Cross-sectional construction follows the published Methods: keep healthy visits, average each participant's visits, and take the mean age across visits. One deviation is carried explicitly: our matrices are \emph{not} residualised on BMI/sex/IRIS/ethnicity. BMI is absent from the recovered sample tables; the other three are available, and confounder adjustment is run as a sensitivity analysis (Section~\ref{sec:e2}) rather than assumed.
+
+\subsection{Reimplementing the pipeline}
+
+The environment provides no R, and the pipeline requires R's \texttt{loess} (degree 2, tricube weights); \texttt{statsmodels.lowess} is degree 1 and not equivalent. Two modules were written and validated. \texttt{src/fastloess.py} implements R-compatible LOESS with leave-one-out span selection over $\{0.3,0.4,0.5,0.6\}$ and prediction on the published half-year grid 26--75 (99 points). \texttt{src/fastdeswan.py} implements DE-SWAN with both test statistics (the Mann--Whitney test of Shen et al.\ and the linear model of Lehallier et al.) and three window schemes, returning per-window group sizes with every curve.
+
+The performance work was necessary rather than cosmetic. A local polynomial fit is linear in $y$, so for a fixed age vector and span the entire smoother is a single matrix $\mathbf{L}$ with $\hat{\mathbf{Y}} = \mathbf{Y}\mathbf{L}^{\top}$; the same holds for the leave-one-out predictions used in span selection. Crucially, permuting age \emph{labels} leaves the \emph{set} of design points unchanged, so in sorted-age coordinates $\mathbf{L}$ is identical across permutations and a permutation reduces to a column shuffle plus a matrix multiply. This converts a ${\sim}40$-hour permutation study into minutes.
+
+\begin{table}[h]
+\centering
+\caption{Validation of the LOESS reimplementation (\texttt{src/validate\_fastloess.py}; all assertions pass).}
+\begin{tabular}{ll}
+\toprule
+Check & Result \\
+\midrule
+vs.\ reference pure-Python implementation & max abs.\ difference $1.2\times10^{-14}$; span agreement 100\%; speed-up ${\approx}4{,}900\times$ \\
+vs.\ authors' published R LOESS output & median per-variable correlation 0.9988; median relative error $1.8\times10^{-3}$ \\
+smoother invariant to age relabelling & holds exactly \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Residual disagreement with R is attributable to R's \texttt{surface="interpolate"} kd-tree approximation together with cross-validation span tie-breaking. The Python fit is faithful, \emph{not} bit-identical, and we do not claim otherwise. A second optimisation---an argsort-based Mann--Whitney used only inside permutation loops---is validated against \texttt{scipy.stats.mannwhitneyu} on the actual data before every use. This caught a real bug: an initial tie-ignoring version disagreed by up to 0.9 in $p$-value on methylation beta values, which contain exact ties at float32 precision. The shipped version handles ties exactly and agrees to 0.0.
+
+\subsection{Experiments}
+
+\begin{table}[h]
+\centering
+\caption{Experimental design.}
+\begin{tabular}{lp{6.1cm}p{5.4cm}}
+\toprule
+& Experiment & Question \\
+\midrule
+E1 & Reproduce published pipeline, all 10 layers, $\pm$ LOESS & Is the artifact present, and how large? \\
+E2 & Ablation: smoothing $\times$ densification, test, scheme, span, adjustment, width $\times$ $q$ & \emph{Which step} manufactures the crest? \\
+E3 & Valid (shuffle-before-LOESS) vs.\ invalid (shuffle-after-LOESS) permutation nulls & Which null is right, and what changes? \\
+E4 & Null simulations; age-distribution resampling; DE-SWAN on strictly linear data & Is the crest a property of the estimator and the design? \\
+E5 & Corrected inference on iPOP & Does \emph{any} transition survive, and where? \\
+E6 & The same battery on GSE40279 ($n=656$) & Broken method, or underpowered cohort? \\
+E7/E7b & Outlier diagnostics; rank-inverse-normal battery; leave-one-subject-out & Does the one positive finding hold up? \\
+E8 & The published 16-cell robustness grid, run on null data & Does the published robustness check discriminate? \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The corrected estimator}
+\label{sec:corrected}
+
+Carbonneau et al.\ recommend but do not supply a replacement. \texttt{src/corrected.py} implements one from well-understood parts rather than a new method that would itself require validation.
+
+\textbf{Any age association?} A linear $F$-test. \textbf{Nonlinear?} A natural cubic spline (df $=4$) against the linear model, by nested $F$-test. \textbf{Discrete transition, and where?} Segmented (broken-stick) regression,
+\[
+y = \beta_0 + \beta_1\,\mathrm{age} + \beta_2\,(\mathrm{age}-\psi)_{+},
+\]
+with the statistic $\sup$-$F$ over candidate breakpoints $\psi\in[35,70]$. Because the breakpoint is a nuisance parameter unidentified under $H_0$~\cite{davies1987}, nominal $p$-values are anticonservative and everything is permutation-calibrated. \textbf{Power-equalised DE-SWAN.} Windows are defined by the $k$ nearest subjects on each side of the centre, so group sizes are $(k,k)$ at every centre by construction and the sample-size component of power cannot shape the curve; realised window width is reported instead. \textbf{Multiplicity in both dimensions.} Benjamini--Hochberg~\cite{bh1995} and Benjamini--Yekutieli~\cite{by2001} across molecules, plus a max-statistic permutation null across the 25 heavily overlapping window centres, giving family-wise control over the quantity actually being interpreted---the maximum of the curve. The published analysis controls only within a window.
+
+All models share one design, so every molecule is fitted in a single least-squares solve (orthonormal-basis RSS, $O(nk)$ rather than $O(n^2)$), and permutation is again a column shuffle.
+
+\subsection{Reproducibility}
+
+Seed 42 throughout (\texttt{src/common.py}). Python 3.12.11, NumPy 2.5.2, SciPy 1.18.0, pandas 3.0.5, statsmodels 0.14.6, scikit-learn 1.9.0, on Linux with 32 CPU cores and 503\,GB RAM. Four NVIDIA RTX A6000 GPUs were present but not used: every operation here is CPU-bound dense linear algebra and rank statistics at sizes where host--device transfer would dominate. Total runtime ${\approx}2.5$ hours. Per-experiment environment snapshots are in \texttt{results/e*\_meta.json}; run logs in \texttt{logs/}.
+
+\section{Results}
+
+\subsection{E1: The artifact reproduces in all ten layers}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig1_reproduction_all_layers.png}
+\caption{Reproduction across all ten iPOP omics layers. Blue: the published LOESS + DE-SWAN pipeline. Orange: the identical Mann--Whitney test, same BH correction, same windows, applied to the raw per-subject data. Dotted lines mark the published transition ages.}
+\label{fig:fig1}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Published pipeline versus the identical test without LOESS, all ten layers.}
+\begin{tabular}{lrrrrr}
+\toprule
+Layer & Variables & Crest age & Peak \% sig. & Floor \% sig. & DE-SWAN only: sig./total \\
+\midrule
+plasma transcriptome & 8{,}556 & 43 & 83.0 & 59.4 & 0 / 213{,}900 \\
+plasma proteomics & 302 & 44 & 81.1 & 57.6 & 1 / 7{,}550 \\
+plasma metabolomics & 814 & 47 & 81.4 & 63.1 & 7 / 20{,}350 \\
+plasma lipidomics & 846 & 45 & 90.7 & 55.3 & 0 / 21{,}150 \\
+plasma cytokine & 66 & 50 & 93.9 & 12.1 & 0 / 1{,}650 \\
+clinical tests & 51 & 63 & 84.3 & 58.8 & 0 / 1{,}275 \\
+gut microbiome & 22{,}892 & 45 & 61.0 & 38.0 & 0 / 572{,}300 \\
+oral microbiome & 1{,}522 & 41 & 68.0 & 49.8 & 0 / 38{,}050 \\
+skin microbiome & 3{,}713 & 40 & 57.9 & 38.8 & 0 / 92{,}825 \\
+nasal microbiome & 9{,}845 & 40 & 65.7 & 35.6 & 0 / 246{,}125 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two features stand out. First, the transcriptome and proteomics crests land at 43 and 44, reproducing the published ${\sim}44$ on an independent reconstruction of the data. Second---and this is the part hard to reconcile with a biological reading---the curve never approaches zero. In every layer a \emph{majority} of molecules are called significantly changed at \emph{every} window centre from 40 to 64. A curve that is uniformly near-saturated carries no localisation information: its maximum is a ranking among large numbers, not a detection.
+
+The comparison arm is decisive. The same test, the same multiplicity correction, and the same windows, applied to the raw per-subject values, yield 8 significant tests in 1{,}215{,}175 across all ten layers---far fewer than the ${\sim}60{,}759$ expected if 5\% of tests were false positives, i.e.\ a conservative procedure finding essentially nothing.
+
+\subsection{E2: Which step manufactures the signal}
+\label{sec:e2}
+
+Two mechanisms are conflated in LOESS + DE-SWAN and had not previously been separated. \emph{Smoothing}: fitted values are weighted averages of overlapping neighbourhoods, hence strongly dependent and nearly monotone within a window. \emph{Densification}: the fit is read on a 99-point uniform grid rather than at the 77--102 non-uniformly spaced observed ages. We separated them with a $2\times2$ design.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig2_decomposition.png}
+\caption{Decomposition and crest instability. (a) Peak \% of variables significant under each combination of smoothing and densification. (b) Every crest age obtained across the one-factor ablations, one row per layer.}
+\label{fig:fig2}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Peak \% of variables called significant under each combination.}
+\begin{tabular}{lrrrr}
+\toprule
+Layer & raw (neither) & interpolate (densify only) & LOESS at observed ages & LOESS on grid \\
+ & & & (smooth only) & (\textbf{published}) \\
+\midrule
+transcriptome & 0.0 & 10.4 & \textbf{79.6} & 83.0 \\
+proteomics & 0.3 & 31.1 & \textbf{78.8} & 81.1 \\
+metabolomics & 0.4 & 29.1 & \textbf{81.9} & 81.4 \\
+lipidomics & 0.0 & 27.3 & \textbf{92.0} & 90.7 \\
+cytokine & 0.0 & 22.7 & \textbf{97.0} & 93.9 \\
+clinical tests & 0.0 & 45.1 & \textbf{82.4} & 84.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Smoothing is the culprit, not densification.} LOESS evaluated at the observed ages---with no densification at all---reproduces essentially the entire published effect (median 98\% of it). Linear interpolation onto the same 99-point grid, which densifies without any local averaging, reaches only a fraction of it and still has a floor of zero.
+
+Three further ablations refine the picture. (i) \emph{The test statistic is irrelevant.} Replacing Mann--Whitney with the linear model of Lehallier et al.\ gives nearly identical results on smoothed data (transcriptome peak $7{,}102 \rightarrow 7{,}153$). The artifact is not specific to rank tests; it is the dependence structure. (ii) \emph{The crest age is not stable across defensible choices.} Across test, window scheme, span, and confounder adjustment, the crest moves by a median of ${\sim}6$ years and by up to 32 (clinical tests span 31--63). Switching the LOESS span from 0.3 to 0.6 moves the clinical-test crest from 44 to 63. Evaluating the \emph{same} fit at the observed ages instead of the grid moves the transcriptome crest from 43 to 60---a change that touches no data, only where the curve is read. (iii) \emph{Confounder adjustment does not rescue it.} Residualising on sex, ethnicity and IRIS leaves the published arm essentially unchanged (transcriptome crest 43, peak 84.0\%).
+
+Reported here for the first time alongside a DE-SWAN curve are \textbf{per-window group sizes}. On the raw data the younger half ranges from $n=5$ (age 40) to $n=40$ (age 64), an eight-fold swing in statistical power along the age axis. On the LOESS grid it is exactly $(20,20)$ everywhere.
+
+\subsection{E3: The permutation null decides everything, and the ordering decides the null}
+
+This is the crux of the disagreement in the literature. Shen et al.\ report a permutation test under which their peaks disappear; Carbonneau et al.\ report one under which they do not. The difference is a single ordering step. \emph{Algorithm 1} (Carbonneau): shuffle ages, \emph{then} LOESS, then DE-SWAN---valid, because subjects are exchangeable under $H_0$. \emph{Algorithm 2} (Shen, Suppl.\ Fig.\ 4c): LOESS, \emph{then} shuffle ages, then DE-SWAN---invalid, because the LOESS output is not exchangeable. We ran both, on the same data, in the same code.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig3_permutation_nulls.png}
+\caption{Observed curves against both permutation nulls. Blue: observed. Green band and dashed line: the valid null (shuffle before smoothing), 95\% interval and mean. Orange: the invalid null (shuffle after smoothing).}
+\label{fig:fig3}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Observed peaks against both nulls. 300 permutations for the transcriptome, 1{,}000 for the rest; $p$-values are max-statistic permutation $p$-values, giving family-wise control across the 25 overlapping window centres.}
+\begin{tabular}{lrrrrrr}
+\toprule
+Layer & Obs.\ peak & Valid-null mean & \textbf{$p$ (valid)} & Invalid-null mean & \textbf{$p$ (invalid)} & Achieved FDP \\
+\midrule
+transcriptome & 7{,}102 & 7{,}270 & 0.65 & 238 & 0.003 & 0.687 \\
+proteomics & 245 & 248 & 0.66 & 5.6 & 0.001 & 0.679 \\
+cytokine & 62 & 60 & 0.42 & 4.0 & 0.001 & 0.690 \\
+metabolomics & 663 & 668 & 0.59 & 15.8 & 0.001 & 0.685 \\
+lipidomics & 767 & 746 & 0.37 & 42.0 & 0.001 & 0.677 \\
+clinical tests & 43 & 39 & 0.04 & 1.9 & 0.001 & 0.601 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three readings follow. First, \textbf{under the valid null nothing is significant}; in four of six layers the observed peak is \emph{below} the null mean. Clinical tests reach a nominal $p=0.04$, which does not survive correction for the six layers tested (Bonferroni threshold $0.0083$) and is reported here as nominal only. Second, \textbf{under the invalid null everything is highly significant}: the published null's mean peak is 1--5\% of the observed value, because shuffling after smoothing destroys exactly the smoothness the test exploits, producing a null the real data beats trivially whether or not any signal exists. Third, \textbf{the achieved error rate is catastrophic}. On permuted data every null hypothesis is true, so every rejection is false and the rejection rate \emph{is} the false discovery proportion. It is 0.60--0.69 against a nominal FDR of 0.05---an inflation factor of roughly 13.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/fig7_achieved_fdr.png}
+\caption{Achieved false discovery proportion of the published pipeline against its nominal level of 0.05.}
+\label{fig:fig7}
+\end{figure}
+
+Where do artifactual crests land? The valid-null crest distribution has a median of 41--44 in every layer, with 90--100\% of null crests falling in 40--48. The artifact's preferred location is the published transition age.
+
+\subsection{E4: Both published ages arise from data with no age relationship}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig4_null_simulations.png}
+\caption{Null simulations and the power confound.}
+\label{fig:fig4}
+\end{figure}
+
+\textbf{(a) Pure noise reproduces the published structure.} One thousand molecules drawn i.i.d.\ $\mathcal{N}(0,1)$, independent of age, at the real iPOP ages, run through the complete published pipeline: 81\% of molecules are called significant at FDR 0.05, and the mean curve is not flat. Read over the widest admissible range of window centres (36--65), it declines from a left-boundary maximum, troughs at 55, and rises to a genuine interior local maximum at 61. Restricted to the published 40--65 plotting window, its maximum sits at the left boundary and reads as a crest in the low 40s.
+
+Both published ages are therefore reproduced by data containing no age relationship at all---but for two different reasons, and the distinction matters. The ${\sim}60$ crest is a real interior feature of the null curve. The ${\sim}44$ crest is a \emph{boundary effect of the plotting range}: the null curve decreases monotonically through the low 40s, and truncating the $x$-axis at 40 turns a descent into an apparent peak.
+
+\textbf{(b) The curve shape is set by the age distribution alone.} With an identical null generator, four age distributions, and $n$ held fixed, the apparent crest on null data is: real iPOP, 40 (left boundary of the plotted range); uniform, 57; $\mathcal{N}(50,10)$, 64; bimodal(37,64), 62.
+
+\textbf{(c) DE-SWAN turns strictly linear data into waves, with no LOESS involved.} Data were generated with an exactly linear age trend and tested without any smoothing.
+
+\begin{table}[h]
+\centering
+\caption{DE-SWAN applied without smoothing to data whose truth is a straight line at every age.}
+\begin{tabular}{lrrr}
+\toprule
+Scenario & Apparent crest & Peak count / 1000 & corr(counts, harmonic-mean window $n$) \\
+\midrule
+homoskedastic & 54 & 194 & \textbf{0.76} \\
+variance increasing with age & 54 & 11 & 0.68 \\
+variance decreasing with age & 60 & 94 & \textbf{0.82} \\
+outlier cluster at 55 & 54 & 22 & 0.60 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The counts rise from 0 at the edges to a sharp peak at 54--60 on data with no nonlinearity whatsoever. The curve is tracking where the cohort has enough subjects to detect the trend.
+
+\textbf{(d) Resampling the real data.} Subsampling iPOP subjects to 70\% while flattening the age distribution (group-size CV $0.50\rightarrow0.37$) leaves the median crest near 43--44 but widens its inter-quartile range from 4 to 18 years in the transcriptome: the crest becomes markedly less determinate once the design is made more even. The flattening achievable by subsampling a 97-subject cohort is limited, and this is the weakest of the four sub-experiments.
+
+\subsection{E8: The published robustness analysis cannot discriminate}
+
+Shen et al.\ defend the ${\sim}44$ crest by showing that it is stable across bucket widths $\{15,20,25,30\}$ and $q$-thresholds $\{10^{-4},10^{-3},10^{-2},0.05\}$. We reproduce that stability: on the real iPOP transcriptome the crest sits at 43--46 across all 16 cells (sd 1.1 years); on proteomics, at 40--45.
+
+That argument is evidence for biology \emph{only if} an artifactual crest would be unstable across the same grid. It is not.
+
+\begin{table}[h]
+\centering
+\caption{The published 16-cell robustness grid, run on null data.}
+\begin{tabular}{lrrr}
+\toprule
+Layer & Real-data crest spread & Median null-data spread & Fraction of null sims.\ at least as stable \\
+\midrule
+transcriptome & 3 years & 3 years & \textbf{0.79} \\
+proteomics & 5 years & 2 years & \textbf{1.00} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In proteomics the null is \emph{more} robust than the real data. Stability across bucket width and $q$-threshold is predicted equally by the artifact and by a biological transition, so it discriminates between them not at all. This is, to our knowledge, the first direct test of that robustness argument, and it removes the main published defence of the crest.
+
+\subsection{The mechanism}
+
+On the LOESS grid every window contains exactly $(20,20)$ points, so unequal group sizes---the mechanism behind DE-SWAN's behaviour on \emph{raw} data---cannot explain the published curve. The remaining candidate is the \emph{local sparsity of the age design}: where subjects are sparse, the LOESS neighbourhood spans a wider age range, the fitted curve is more nearly linear within a window, and a rank test separates the two halves almost perfectly. That predicts the artifactual crest sits where subject density is lowest, which is testable and confirmed below.
+
+\section{Corrected inference}
+
+\subsection{E5: What survives on iPOP}
+
+Having established that the pipeline is not interpretable, the question the existing critique leaves open is whether \emph{anything} is there. We applied the corrected battery of Section~\ref{sec:corrected} to the same raw data.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig5_corrected_ipop.png}
+\caption{iPOP under corrected inference. (a) What survives each of the three separated claims. (b) The single positive finding, subjected to leave-one-subject-out refitting. (c) Bootstrap uncertainty of the crest age that the published analysis reports as a point estimate.}
+\label{fig:fig5}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Corrected inference on iPOP. All $p$-values permutation-calibrated against a shuffle-before-modelling null, 200 permutations pooled across variables; BH and BY across variables at $\alpha=0.05$. Clinical tests: 6 of 51 variables excluded for missing values. Power-equalised DE-SWAN uses $k=15$--$17$ subjects per side and a max-statistic permutation null over the 25 window centres, 500 permutations.}
+\begin{tabular}{lrrrrrr}
+\toprule
+Layer & Vars & \textbf{C1} assoc. & \textbf{C2} & \textbf{C2} transition & Power-eq.\ & median $R^2$ \\
+ & & (BH/BY) & nonlin. & (BH/BY) & FWER $p$ & (linear) \\
+\midrule
+transcriptome & 8{,}556 & 0 / 0 & 0 & 0 / 0 & 1.00 & 0.005 \\
+proteomics & 302 & 6 / 0 & 0 & 0 / 0 & 1.00 & 0.007 \\
+metabolomics & 814 & 14 / 2 & 0 & 0 / 0 & 1.00 & 0.009 \\
+lipidomics & 846 & 0 / 0 & 0 & 0 / 0 & 1.00 & 0.011 \\
+cytokine & 66 & 0 / 0 & \textbf{46} & \textbf{35} / 0 & 0.25 & 0.019 \\
+clinical tests & 45 & 1 / 1 & 0 & 0 / 0 & 1.00 & 0.005 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The result is stark and, on reflection, unsurprising given the preceding section: \textbf{iPOP contains almost no molecule-level age signal that survives multiplicity correction at all}, let alone a discrete transition. Median linear $R^2$ with age is 0.005--0.019. An independent check confirms it: the strongest Pearson correlation with age anywhere in the 8{,}556-gene transcriptome is $|r|=0.391$ (min $p=7.5\times10^{-5}$), and the number of genes with nominal $p<0.05$ is 283---fewer than the 428 expected by chance.
+
+The power-equalised DE-SWAN---group sizes fixed at $(k,k)$ so that the sample-size component of power cannot shape the curve, with family-wise control across window centres---finds no window exceeding its null in any layer.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{figures/fig5b_power_equalised.png}
+\caption{Power-equalised DE-SWAN against its max-statistic permutation null.}
+\label{fig:fig5b}
+\end{figure}
+
+\textbf{The crest, reported honestly, is uninformative.} The waves literature reports the crest age as a point estimate with no uncertainty. Bootstrapping subjects and re-running the entire published pipeline gives the intervals below.
+
+\begin{table}[h]
+\centering
+\caption{Bootstrap uncertainty of the published-style crest age.}
+\begin{tabular}{lrrrr}
+\toprule
+Layer & Published-style point estimate & Bootstrap median & 95\% CI & Width \\
+\midrule
+transcriptome & 43 & 43 & [40, 62] & 22 years \\
+proteomics & 44 & 41 & [40, 45] & 5 years \\
+metabolomics & 47 & 40 & [40, 46] & 6 years \\
+lipidomics & 45 & 45 & [40, 60] & 20 years \\
+cytokine & 50 & 50 & [40, 60] & 20 years \\
+clinical tests & 63 & 43 & [40, 64] & 24 years \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Four of six intervals span 20--24 years---essentially the entire analysed range---and cover both published transition ages and everything between them. For clinical tests the point estimate (63) is not even close to the bootstrap median (43). Where the intervals \emph{are} narrow (proteomics, metabolomics), they are narrow because they pile up against the left boundary of the plotting window, which the null simulations identify as an artifact of where the axis was truncated.
+
+\subsection{E7/E7b: Attacking the one positive finding}
+
+One cell of the table above is not null: 46/66 cytokine analytes nonlinear and 35/66 with a significant breakpoint, all at age 41. Under our pre-registered criteria this is the candidate for a real transition, and it sits suspiciously close to the published 44. It therefore received the hardest scrutiny in the project.
+
+\textbf{Outlier diagnostics} show the cytokine panel is unlike the others: median excess kurtosis 27.0 (versus 0.1--4.2 elsewhere), 83\% of analytes with a point beyond 4 SD, and 61\% beyond 6 SD. Raw cytokine concentrations are strongly right-skewed and were not log-transformed in our reconstruction.
+
+\textbf{Rank-inverse-normal transform (RINT).} Replacing values by Blom scores is monotone---it preserves any genuinely ordered relationship with age---while bounding the influence of any single observation. Under RINT the count of significant breakpoints falls from 35 to 4--7 analytes, still with breakpoints at 41--44.
+
+\textbf{Leave-one-subject-out.} Dropping the single subject aged 25.9 leaves 2.8\% of the median $\sup$-$F$ statistic. A finding that is 97\% attributable to one extreme-age observation is not a population-level transition.
+
+\textbf{Nested-subset control.} Re-running the full RINT battery on nested subsets gives, for all 91 subjects, 21/66 nonlinear and 7/66 with a discrete transition, at breakpoints 41, 41, 41, 43, 43, 43 and 44. The apparent localisation is thus driven by the sparsely sampled left tail of the age distribution---exactly the prediction of the sparsity mechanism of the preceding section---rather than by a change in the age trend of the cytokine panel.
+
+\subsection{E6: An independent, well-powered cohort}
+
+The remaining alternative explanation is that iPOP is simply too small to detect a real transition, in which case the corrected battery's null result would say nothing about the biology. GSE40279~\cite{hannum2013} settles this: 656 subjects spanning ages 19--101, roughly six times the iPOP sample and with far broader age coverage, in a modality (whole-blood methylation) with well-established, strong age association. Corrected inference on this cohort recovers abundant age-associated variation---as expected---but does \emph{not} concentrate change at 44 or 60; the segmented sup-$F$ evidence does not localise a transition at either published age. The failure to find waves in iPOP is therefore a property of the method and the design, not merely of the cohort's size.
+
+\section{Discussion}
+
+Returning to the three separated claims: \textbf{C1} (aging is nonlinear somewhere) is untouched by this work and remains plausible, but is not supported by the iPOP analysis as published. \textbf{C2} (discrete transition ages exist) is not supported: no layer yields a transition that survives permutation-calibrated segmented regression with multiplicity control in both the molecule and the window-centre dimension, and the single candidate that came close collapses under an outlier-robust transform and a leave-one-subject-out check. \textbf{C3} (the transitions are at 44 and 60) is actively contradicted: pure noise reproduces both ages, the valid-null crest distribution has a median of 41--44 in every layer, and bootstrap intervals on the crest span most of the analysed range.
+
+The mechanism deserves emphasis because it generalises beyond this pipeline. LOESS turns independent observations into a strongly dependent, locally near-monotone sequence; a two-sample rank test applied across such a sequence rejects almost everywhere, and the location of its maximum is determined by where the design is sparse, not by where the biology changes. Because the fitted values are weighted averages of overlapping neighbourhoods, the effective number of independent observations in a window is a small fraction of the nominal count, and any procedure that treats the smoothed values as data will report an error rate roughly an order of magnitude below the one it achieves. Our measured inflation, ${\approx}13\times$, is a direct estimate of that gap.
+
+Two methodological lessons follow. First, \emph{the null must be constructed at the level of exchangeable units}. The distinction between shuffling before and after smoothing is not a technicality: it is the difference between $p=0.65$ and $p=0.003$ on the same data, in the same code, for the same statistic. Second, \emph{robustness to tuning parameters is not evidence of signal} unless one has verified that an artifact would \emph{not} be similarly robust. The published 16-cell grid fails that verification outright, and we suspect many similar robustness displays in the literature would too.
+
+\paragraph{Limitations.} Our LOESS is faithful to R's but not bit-identical, with residual disagreement attributable to R's interpolation surface and CV tie-breaking; the median per-variable correlation of 0.9988 bounds the impact, but we do not claim exact reproduction. Our iPOP matrices are not residualised on BMI, which is absent from the recovered sample tables; adjustment on the three available covariates leaves conclusions unchanged, but we cannot rule out a BMI-driven effect. The age-flattening resampling (Section~3, experiment E4d) is limited by what a 97-subject cohort permits and is the weakest evidence we present. Finally, we test the specific claim of discrete transitions in these cohorts; we do not, and cannot, establish that molecular aging is everywhere linear.
+
+\section{Conclusion}
+
+The reported waves of human molecular aging at ${\sim}44$ and ${\sim}60$ years are artifacts of the LOESS + DE-SWAN pipeline. Across all ten iPOP omics layers, the published procedure declares a majority of molecules changed at every age, achieves a false discovery proportion of 0.60--0.69 against a nominal 0.05, is not significant under a valid permutation null, reproduces both published ages from data with no age relationship, and rests on a robustness argument that pure noise satisfies as readily as real data. Corrected inference finds no defensible discrete transition in iPOP and does not localise change at 44 or 60 in an independent cohort six times larger.
+
+A DE-SWAN curve computed on smoothed data is not interpretable, and no amount of parameter-robustness checking makes it so. Any claim of an age-localised transition needs three things the current literature does not supply: a permutation null constructed at the level of exchangeable units (subjects, before smoothing), an uncertainty interval on the transition age, and per-window group sizes reported alongside the curve. On this evidence, the ${\sim}44$ and ${\sim}60$ transitions in iPOP do not meet that bar.
+
+\begin{thebibliography}{9}
+
+\bibitem{lehallier2019}
+B.~Lehallier, D.~Gate, N.~Schaum, T.~Nanasi, S.~E.~Lee, H.~Yousef, P.~Moran Losada, D.~Berdnik, A.~Keller, J.~Verghese, S.~Sathyan, C.~Franceschi, S.~Milman, N.~Barzilai, and T.~Wyss-Coray.
+\newblock Undulating changes in human plasma proteome profiles across the lifespan.
+\newblock \emph{Nature Medicine}, 25:1843--1850, 2019.
+
+\bibitem{shen2024}
+X.~Shen, C.~Wang, X.~Zhou, W.~Zhou, D.~Hornburg, S.~Wu, and M.~P.~Snyder.
+\newblock Nonlinear dynamics of multi-omics profiles during human aging.
+\newblock \emph{Nature Aging}, 4:1619--1634, 2024.
+
+\bibitem{carbonneau2026}
+M.~Carbonneau, K.~H.~Shutta, C.~Miller, M.~P.~Snyder, X.~Shen, and J.~Quackenbush.
+\newblock Smoothing before testing manufactures waves: on the statistical validity of LOESS and DE-SWAN in aging omics.
+\newblock \emph{bioRxiv}, 2026.
+
+\bibitem{hannum2013}
+G.~Hannum, J.~Guinney, L.~Zhao, L.~Zhang, G.~Hughes, S.~Sadda, B.~Klotzle, M.~Bibikova, J.-B.~Fan, Y.~Gao, R.~Deconde, M.~Chen, I.~Rajapakse, S.~Friend, T.~Ideker, and K.~Zhang.
+\newblock Genome-wide methylation profiles reveal quantitative views of human aging rates.
+\newblock \emph{Molecular Cell}, 49(2):359--367, 2013.
+\newblock GEO accession GSE40279.
+
+\bibitem{davies1987}
+R.~B.~Davies.
+\newblock Hypothesis testing when a nuisance parameter is present only under the alternative.
+\newblock \emph{Biometrika}, 74(1):33--43, 1987.
+
+\bibitem{bh1995}
+Y.~Benjamini and Y.~Hochberg.
+\newblock Controlling the false discovery rate: a practical and powerful approach to multiple testing.
+\newblock \emph{Journal of the Royal Statistical Society: Series B}, 57(1):289--300, 1995.
+
+\bibitem{by2001}
+Y.~Benjamini and D.~Yekutieli.
+\newblock The control of the false discovery rate in multiple testing under dependency.
+\newblock \emph{The Annals of Statistics}, 29(4):1165--1188, 2001.
+
+\bibitem{cleveland1979}
+W.~S.~Cleveland.
+\newblock Robust locally weighted regression and smoothing scatterplots.
+\newblock \emph{Journal of the American Statistical Association}, 74(368):829--836, 1979.
+
+\bibitem{nrg2026}
+Nonlinear trajectories in human aging: from omics signatures to intervention windows.
+\newblock \emph{Nature Reviews Genetics}, 2026.
+
+\end{thebibliography}
+
+\end{document}
